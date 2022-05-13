@@ -15,14 +15,12 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
-
-	restgoonch "github.com/thaigoonch/restgoonch/service"
 )
 
 func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 	//contentLength := req.ContentLength
 	//fmt.Printf("Content Length Received : %v\n", contentLength)
-	request := &restgoonch.Request{}
+	request := &Request{}
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		log.Fatalf("Unable to read message from request : %v", err)
@@ -33,16 +31,16 @@ func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 	key := request.GetKey()
 	log.Printf("Received text from client: %s", text)
 
-	msg := &restgoonch.DecryptedText{}
+	msg := &DecryptedText{}
 	encrypted, err := encrypt(key, text)
 	if err != nil {
-		msg = &restgoonch.DecryptedText{Result: fmt.Errorf("error during encryption: %v", err)}
+		msg = &DecryptedText{Result: fmt.Sprintf("error during encryption: %v", err)}
 	} else {
 		result, err := decrypt(key, encrypted)
 		if err != nil {
-			msg = &restgoonch.DecryptedText{Result: fmt.Errorf("error during encryption: %v", err)}
+			msg = &DecryptedText{Result: fmt.Sprintf("error during encryption: %v", err)}
 		} else {
-			msg = &restgoonch.DecryptedText{Result: result}
+			msg = &DecryptedText{Result: result}
 		}
 	}
 	response, err := proto.Marshal(msg)
