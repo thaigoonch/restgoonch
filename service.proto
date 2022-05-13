@@ -11,7 +11,3 @@ message Request {
 message DecryptedText {
   string result = 1;
 }
-
-service Service {
-  rpc CryptoRequest(Request) returns (DecryptedText) {}
-}

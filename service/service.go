@@ -8,32 +8,49 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 
-	"golang.org/x/net/context"
+	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
+
+	restgoonch "github.com/thaigoonch/restgoonch/service"
 )
 
-type Server struct {
-	ServiceServer
-}
-
-func (s *Server) CryptoRequest(ctx context.Context, input *Request) (*DecryptedText, error) {
-	log.Printf("Received text from client: %s", input.Text)
-
-	encrypted, err := encrypt(input.Key, input.Text)
+func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
+	//contentLength := req.ContentLength
+	//fmt.Printf("Content Length Received : %v\n", contentLength)
+	request := &restgoonch.Request{}
+	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		return &DecryptedText{Result: ""},
-			fmt.Errorf("error during encryption: %v", err)
+		log.Fatalf("Unable to read message from request : %v", err)
 	}
-	result, err := decrypt(input.Key, encrypted)
-	if err != nil {
-		return &DecryptedText{Result: ""},
-			fmt.Errorf("error during decryption: %v", err)
-	}
+	proto.Unmarshal(data, request)
 
+	text := request.GetText()
+	key := request.GetKey()
+	log.Printf("Received text from client: %s", text)
+
+	msg := &restgoonch.DecryptedText{}
+	encrypted, err := encrypt(key, text)
+	if err != nil {
+		msg = &restgoonch.DecryptedText{Result: fmt.Errorf("error during encryption: %v", err)}
+	} else {
+		result, err := decrypt(key, encrypted)
+		if err != nil {
+			msg = &restgoonch.DecryptedText{Result: fmt.Errorf("error during encryption: %v", err)}
+		} else {
+			msg = &restgoonch.DecryptedText{Result: result}
+		}
+	}
+	response, err := proto.Marshal(msg)
+	if err != nil {
+		log.Fatalf("Unable to marshal response : %v", err)
+	}
 	time.Sleep(4 * time.Second)
-	return &DecryptedText{Result: result}, nil
+	resp.Write(response)
 }
 
 func encrypt(key []byte, text string) (string, error) {
@@ -72,4 +89,19 @@ func decrypt(key []byte, cryptoText string) (string, error) {
 	stream.XORKeyStream(ciphertext, ciphertext)
 
 	return fmt.Sprintf("%v", ciphertext), nil
+}
+
+func main() {
+	fmt.Println("restgoonch waiting for client requests...")
+	r := mux.NewRouter()
+	r.HandleFunc("/cryptorequest", CryptoRequest).Methods("POST")
+
+	server := &http.Server{
+		Handler:      r,
+		Addr:         "0.0.0.0:8080",
+		WriteTimeout: 2 * time.Second,
+		ReadTimeout:  2 * time.Second,
+	}
+
+	log.Fatal(server.ListenAndServe())
 }
