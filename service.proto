@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package service;
-option go_package = "github.com/thaigoonch/grpcgoonch-nonheadless;grpcgoonchnonheadless";
+option go_package = "github.com/thaigoonch/restgoonch";
 
 message Request {
   string text = 1;
