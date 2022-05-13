@@ -12,4 +12,4 @@ WORKDIR /app
 RUN go install ./...
 
 ENTRYPOINT ["/go/bin/restgoonch"]
-EXPOSE 9000
+EXPOSE 8080
