@@ -94,7 +94,7 @@ func decrypt(key []byte, cryptoText string) (string, error) {
 func main() {
 	fmt.Println("restgoonch waiting for client requests...")
 	r := mux.NewRouter()
-	r.HandleFunc("/encrypt", CryptoRequest).Methods("POST")
+	r.HandleFunc("/service", CryptoRequest).Methods("POST")
 
 	server := &http.Server{
 		Handler:      r,
