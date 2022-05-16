@@ -31,16 +31,6 @@ var (
 )
 
 func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
-
-	reg := prometheus.NewRegistry()
-	_ = reg.Register(restReqCount)
-
-	// Create an http server for prometheus
-	httpServer := &http.Server{
-		Handler: promhttp.HandlerFor(reg, promhttp.HandlerOpts{}),
-		Addr:    fmt.Sprintf(":%d", promPort),
-	}
-
 	// Do REST service things
 	request := &restgoonch.Request{}
 	data, err := ioutil.ReadAll(req.Body)
@@ -67,12 +57,6 @@ func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	restReqCount.Inc()
-	// Start http server for prometheus
-	go func() {
-		if err := httpServer.ListenAndServe(); err != nil {
-			log.Fatalf("Unable to start an http server on port %d: %v", promPort, err)
-		}
-	}()
 
 	response, err := proto.Marshal(msg)
 	if err != nil {
@@ -121,10 +105,28 @@ func decrypt(key []byte, cryptoText string) (string, error) {
 }
 
 func main() {
+
+	reg := prometheus.NewRegistry()
+	_ = reg.Register(restReqCount)
+
+	// Create an http server for prometheus
+	httpServer := &http.Server{
+		Handler: promhttp.HandlerFor(reg, promhttp.HandlerOpts{}),
+		Addr:    fmt.Sprintf(":%d", promPort),
+	}
+
 	fmt.Println("restgoonch waiting for client requests...")
 	r := mux.NewRouter()
 	r.HandleFunc("/service", CryptoRequest).Methods("POST")
 
+	// Start http server for prometheus
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil {
+			log.Fatalf("Unable to start an http server on port %d: %v", promPort, err)
+		}
+	}()
+
+	// Start REST server
 	server := &http.Server{
 		Handler:      r,
 		Addr:         fmt.Sprintf(":%d", restPort),
