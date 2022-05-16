@@ -15,13 +15,33 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	restgoonch "github.com/thaigoonch/restgoonch/service"
 )
 
+var (
+	restPort     = 8080
+	promPort     = 9092
+	restReqCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "rest_server_handled_total",
+		Help: "Total number of POSTs handled",
+	})
+)
+
 func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
-	//contentLength := req.ContentLength
-	//fmt.Printf("Content Length Received : %v\n", contentLength)
+
+	reg := prometheus.NewRegistry()
+	_ = reg.Register(restReqCount)
+
+	// Create an http server for prometheus
+	httpServer := &http.Server{
+		Handler: promhttp.HandlerFor(reg, promhttp.HandlerOpts{}),
+		Addr:    fmt.Sprintf(":%d", promPort),
+	}
+
+	// Do REST service things
 	request := &restgoonch.Request{}
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -41,10 +61,19 @@ func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 		result, err := decrypt(key, encrypted)
 		if err != nil {
 			msg = &restgoonch.DecryptedText{Result: fmt.Sprintf("error during encryption: %v", err)}
-		} else {
+		} else { // Successful POST handled
 			msg = &restgoonch.DecryptedText{Result: result}
 		}
 	}
+
+	restReqCount.Inc()
+	// Start http server for prometheus
+	go func() {
+		if err := httpServer.ListenAndServe(); err != nil {
+			log.Fatalf("Unable to start an http server on port %d: %v", promPort, err)
+		}
+	}()
+
 	response, err := proto.Marshal(msg)
 	if err != nil {
 		log.Fatalf("Unable to marshal response : %v", err)
@@ -98,7 +127,7 @@ func main() {
 
 	server := &http.Server{
 		Handler:      r,
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%d", restPort),
 		WriteTimeout: 6 * time.Second,
 		ReadTimeout:  6 * time.Second,
 	}

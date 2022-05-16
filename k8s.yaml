@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: restgoonch
-        image: thaigoonch/restgoonch:1.6
+        image: thaigoonch/restgoonch:1.7
         ports:
         - name: serviceport
           containerPort: 8080
