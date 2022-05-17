@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: restgoonch
-        image: thaigoonch/restgoonch:1.9
+        image: thaigoonch/restgoonch:1.10
         ports:
         - name: serviceport
           containerPort: 8080
@@ -41,12 +41,11 @@ metadata:
 spec:
   selector:
     app: restgoonch
-  type: NodePort
+  type: ClusterIP
   ports:
   - name: serviceport
     port: 8080
     targetPort: 8080
-    nodePort: 30000
   - name: prometheusport
     port: 9092
 ---

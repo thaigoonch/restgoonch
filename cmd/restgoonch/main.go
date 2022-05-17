@@ -24,11 +24,20 @@ import (
 var (
 	restPort     = 8080
 	promPort     = 9092
+	reg          = prometheus.NewRegistry()
 	restReqCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "rest_server_handled_total",
 		Help: "Total number of POSTs handled",
 	})
 )
+
+func init() {
+	reg.MustRegister(restReqCount)
+	_, err := reg.Gather()
+	if err != nil {
+		log.Fatalf("Prometheus metric registration error: %v", err)
+	}
+}
 
 func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 	request := &restgoonch.Request{}
@@ -104,10 +113,6 @@ func decrypt(key []byte, cryptoText string) (string, error) {
 }
 
 func main() {
-
-	reg := prometheus.NewRegistry()
-	_ = reg.Register(restReqCount)
-
 	// Create an http server for prometheus
 	httpServer := &http.Server{
 		Handler: promhttp.HandlerFor(reg, promhttp.HandlerOpts{}),
