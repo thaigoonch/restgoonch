@@ -31,7 +31,6 @@ var (
 )
 
 func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
-	// Do REST service things
 	request := &restgoonch.Request{}
 	data, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -56,7 +55,7 @@ func CryptoRequest(resp http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	restReqCount.Inc()
+	restReqCount.Inc() // increment prometheus metric
 
 	response, err := proto.Marshal(msg)
 	if err != nil {
@@ -128,10 +127,8 @@ func main() {
 
 	// Start REST server
 	server := &http.Server{
-		Handler:      r,
-		Addr:         fmt.Sprintf(":%d", restPort),
-		WriteTimeout: 6 * time.Second,
-		ReadTimeout:  6 * time.Second,
+		Handler: r,
+		Addr:    fmt.Sprintf(":%d", restPort),
 	}
 
 	log.Fatal(server.ListenAndServe())
